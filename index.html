@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%);
+        }
+        
+        canvas {
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+            background-color: #1e293b;
+            border-radius: 12px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5); 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3); 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.6); 
+        }
+
+        .pulse-dot {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(56, 189, 248, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 md:p-8">
+    
+    <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Game Section -->
+        <div class="lg:col-span-2 flex flex-col items-center">
+            
+            <!-- Header -->
+            <div class="w-full max-w-[500px] flex justify-between items-end mb-6">
+                <div>
+                    <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-500 tracking-tight">
+                        Snake
+                    </h1>
+                    <p class="text-slate-400 text-sm mt-1">Usa las flechas de tu teclado para jugar</p>
+                </div>
+                <div class="text-right glass-panel px-4 py-2 rounded-xl">
+                    <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Puntuación</div>
+                    <div id="currentScore" class="text-3xl font-bold text-sky-400 leading-none">0</div>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="relative group">
+                <canvas id="gameCanvas" width="500" height="500" class="w-full max-w-[500px] aspect-square"></canvas>
+                
+                <!-- Game Over Modal Overlay -->
+                <div id="gameOverModal" class="absolute inset-0 glass-panel rounded-xl flex-col items-center justify-center hidden z-10 transition-all duration-300">
+                    <div class="bg-slate-900/90 p-8 rounded-2xl border border-slate-700/50 text-center shadow-2xl max-w-[85%] w-full transform scale-95 transition-transform duration-300" id="modalContent">
+                        <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <h2 class="text-3xl font-bold text-white mb-2">¡Fin del Juego!</h2>
+                        <p class="text-slate-300 mb-6">Conseguiste <span id="finalScore" class="font-bold text-sky-400 text-2xl">0</span> puntos</p>
+                        
+                        <div class="space-y-4">
+                            <input type="text" id="playerName" maxlength="15" placeholder="Ingresa tu nombre..." autocomplete="off" class="w-full px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-600 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all text-center text-lg placeholder-slate-500">
+                            
+                            <button id="submitScoreBtn" class="w-full px-6 py-3 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 rounded-xl font-semibold transition-all shadow-[0_0_15px_rgba(56,189,248,0.4)] hover:shadow-[0_0_25px_rgba(56,189,248,0.6)] flex justify-center items-center gap-2">
+                                <span>Guardar en Leaderboard</span>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
+                            
+                            <button id="restartBtn" class="w-full px-6 py-2 text-slate-400 hover:text-white transition-colors text-sm font-medium">
+                                Volver a intentar sin guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Start Screen Overlay -->
+                <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 rounded-xl z-20 cursor-pointer backdrop-blur-sm">
+                    <div class="bg-sky-500/20 w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                        <svg class="w-10 h-10 text-sky-400 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Click para Jugar</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Section -->
+        <div class="glass-panel rounded-2xl p-6 flex flex-col h-[600px] lg:mt-0 mt-8 relative overflow-hidden">
+            <!-- Decorative gradient -->
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-sky-500/20 rounded-full blur-3xl"></div>
+            
+            <div class="flex items-center justify-between mb-6 relative z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white">Top Players</h2>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-1 bg-slate-800/80 rounded-full border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-sky-400 pulse-dot"></div>
+                    <span class="text-xs font-medium text-sky-400 tracking-wide uppercase">En vivo</span>
+                </div>
+            </div>
+
+            <!-- Table Header -->
+            <div class="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700/50 mb-2 relative z-10">
+                <div class="col-span-2 text-center">#</div>
+                <div class="col-span-7">Jugador</div>
+                <div class="col-span-3 text-right">Score</div>
+            </div>
+
+            <!-- Table Body -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar relative z-10 pr-2" id="leaderboardList">
+                <div class="flex flex-col items-center justify-center h-full text-slate-500 space-y-3">
+                    <svg class="w-8 h-8 animate-spin text-sky-500/50" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Conectando con Railway...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const currentScoreEl = document.getElementById('currentScore');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const modalContent = document.getElementById('modalContent');
+        const startScreen = document.getElementById('startScreen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const playerNameInput = document.getElementById('playerName');
+        const submitScoreBtn = document.getElementById('submitScoreBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        // Configuración de la API
+        const API_BASE_URL = 'https://snake-production-84d2.up.railway.app';
+        // Ajusta estos endpoints según como esté configurada tu API en Railway
+        const ENDPOINT_GET = '/scores'; 
+        const ENDPOINT_POST = '/scores';
+
+        // Configuración del juego
+        const gridSize = 25; // Tamaño de cada cuadro
+        const tileCount = canvas.width / gridSize;
+        
+        let snake = [];
+        let dx = 0;
+        let dy = 0;
+        let nextDx = 0; // Para evitar movimientos suicidas rápidos
+        let nextDy = 0;
+        let foodX;
+        let foodY;
+        let score = 0;
+        let gameLoopTimeout;
+        let isGameOver = false;
+        let gameStarted = false;
+
+        // Iniciar el juego al hacer click en la pantalla inicial
+        startScreen.addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            resetGame();
+        });
+
+        function resetGame() {
+            // Posición inicial
+            snake = [
+                {x: 10, y: 10},
+                {x: 10, y: 11},
+                {x: 10, y: 12}
+            ];
+            dx = 0;
+            dy = -1; // Mover hacia arriba por defecto
+            nextDx = 0;
+            nextDy = -1;
+            score = 0;
+            isGameOver = false;
+            gameStarted = true;
+            
+            currentScoreEl.textContent = score;
+            
+            // Ocultar modal con animación
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                gameOverModal.classList.add('hidden');
+                gameOverModal.classList.remove('flex');
+            }, 200);
+            
+            playerNameInput.value = '';
+            spawnFood();
+            
+            if(gameLoopTimeout) clearTimeout(gameLoopTimeout);
+            gameLoop();
+        }
+
+        function spawnFood() {
+            let validPosition = false;
+            while (!validPosition) {
+                foodX = Math.floor(Math.random() * tileCount);
+                foodY = Math.floor(Math.random() * tileCount);
+                validPosition = true;
+                
+                // Asegurar que la comida no aparezca sobre la serpiente
+                for (let part of snake) {
+                    if (part.x === foodX && part.y === foodY) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (isGameOver || !gameStarted) return;
+
+            update();
+            draw();
+            
+            // Aumentar velocidad progresivamente
+            const speed = Math.max(60, 120 - (score * 1.5));
+            gameLoopTimeout = setTimeout(gameLoop, speed);
+        }
+
+        function update() {
+            // Aplicar la siguiente dirección calculada
+            dx = nextDx;
+            dy = nextDy;
+
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+            // Colisión con paredes
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                return triggerGameOver();
+            }
+
+            // Colisión con sí mismo
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return triggerGameOver();
+                }
+            }
+
+            snake.unshift(head);
+
+            // Colisión con comida
+            if (head.x === foodX && head.y === foodY) {
+                score += 10;
+                currentScoreEl.textContent = score;
+                // Efecto visual simple al comer
+                currentScoreEl.classList.add('scale-125', 'text-white');
+                setTimeout(() => currentScoreEl.classList.remove('scale-125', 'text-white'), 150);
+                
+                spawnFood();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function draw() {
+            // Limpiar canvas
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar cuadrícula sutil (opcional para un look más tech)
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for(let i=0; i<tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+
+            // Dibujar comida (manzana/cubo brillante)
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#f43f5e';
+            ctx.fillStyle = '#f43f5e';
+            
+            // Comida circular
+            ctx.beginPath();
+            ctx.arc(foodX * gridSize + gridSize/2, foodY * gridSize + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // Resetear sombra para la serpiente
+
+            // Dibujar serpiente
+            snake.forEach((part, index) => {
+                const isHead = index === 0;
+                
+                if (isHead) {
+                    ctx.fillStyle = '#38bdf8'; // Cabeza más brillante
+                    // Ojos simples de la serpiente
+                    ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize, gridSize);
+                    
+                    ctx.fillStyle = '#0f172a';
+                    // Posición de los ojos depende de la dirección
+                    if(dx === 1) { // Derecha
+                        ctx.fillRect(part.x * gridSize + 15, part.y * gridSize + 5, 4, 4);
+                        ctx.fillRect(part.x * gridSize + 15, part.y * gridSize + 16, 4, 4);
+                    } else if(dx === -1) { // Izquierda
+                        ctx.fillRect(part.x * gridSize + 6, part.y * gridSize + 5, 4, 4);
+                        ctx.fillRect(part.x * gridSize + 6, part.y * gridSize + 16, 4, 4);
+                    } else if(dy === -1) { // Arriba
+                        ctx.fillRect(part.x * gridSize + 5, part.y * gridSize + 6, 4, 4);
+                        ctx.fillRect(part.x * gridSize + 16, part.y * gridSize + 6, 4, 4);
+                    } else { // Abajo
+                        ctx.fillRect(part.x * gridSize + 5, part.y * gridSize + 15, 4, 4);
+                        ctx.fillRect(part.x * gridSize + 16, part.y * gridSize + 15, 4, 4);
+                    }
+                } else {
+                    // Gradiente sutil para el cuerpo
+                    const opacity = Math.max(0.3, 1 - (index / snake.length));
+                    ctx.fillStyle = `rgba(14, 165, 233, ${opacity})`;
+                    ctx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
+                }
+            });
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            gameStarted = false;
+            clearTimeout(gameLoopTimeout);
+            finalScoreEl.textContent = score;
+            
+            // Mostrar modal con animación
+            gameOverModal.classList.remove('hidden');
+            gameOverModal.classList.add('flex');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+                playerNameInput.focus();
+            }, 10);
+        }
+
+        // Controles de teclado
+        window.addEventListener('keydown', (e) => {
+            // Evitar scroll con flechas
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+            
+            if (isGameOver && e.key === 'Enter') {
+                if(document.activeElement === playerNameInput) {
+                    submitScoreBtn.click();
+                }
+                return;
+            }
+            
+            if (!gameStarted && e.key === ' ') {
+                startScreen.click();
+                return;
+            }
+
+            // Usamos nextDx/nextDy para evitar el bug de girar 180 grados rápido antes del siguiente frame
+            if (e.key === 'ArrowUp' && dy === 0) { nextDx = 0; nextDy = -1; }
+            if (e.key === 'ArrowDown' && dy === 0) { nextDx = 0; nextDy = 1; }
+            if (e.key === 'ArrowLeft' && dx === 0) { nextDx = -1; nextDy = 0; }
+            if (e.key === 'ArrowRight' && dx === 0) { nextDx = 1; nextDy = 0; }
+        });
+
+        // Lógica de Puntuaciones / API
+        
+        submitScoreBtn.addEventListener('click', async () => {
+            const name = playerNameInput.value.trim();
+            if (!name) {
+                playerNameInput.classList.add('border-red-500', 'ring-red-500/20');
+                setTimeout(() => playerNameInput.classList.remove('border-red-500', 'ring-red-500/20'), 1000);
+                return;
+            }
+
+            const originalText = submitScoreBtn.innerHTML;
+            submitScoreBtn.disabled = true;
+            submitScoreBtn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Guardando...`;
+
+            try {
+                // Preparamos payload (ajusta las keys si tu API espera 'jugador', 'puntos', etc.)
+                const payload = { name: name, score: score };
+                
+                // Intentar endpoint
+                let response = await fetch(`${API_BASE_URL}${ENDPOINT_POST}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                // Si da 404, probamos con '/api/scores' como fallback
+                if (response.status === 404) {
+                     response = await fetch(`${API_BASE_URL}/api${ENDPOINT_POST}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!response.ok) throw new Error('Error en el servidor');
+                
+                // Éxito: forzamos actualización de tabla y reiniciamos
+                await fetchLeaderboard();
+                resetGame();
+                
+            } catch (error) {
+                console.error('Error al guardar:', error);
+                alert('No se pudo guardar la puntuación. Verifica que la API esté funcionando.');
+            } finally {
+                submitScoreBtn.disabled = false;
+                submitScoreBtn.innerHTML = originalText;
+            }
+        });
+
+        restartBtn.addEventListener('click', resetGame);
+
+        // Fetch Leaderboard cada 3 segundos
+        async function fetchLeaderboard() {
+            try {
+                let response = await fetch(`${API_BASE_URL}${ENDPOINT_GET}`);
+                
+                if (response.status === 404) {
+                    response = await fetch(`${API_BASE_URL}/api${ENDPOINT_GET}`);
+                }
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderLeaderboard(data);
+                }
+            } catch (error) {
+                console.error('Error obteniendo leaderboard:', error);
+                if (leaderboardList.children.length === 1 && leaderboardList.innerHTML.includes('Conectando')) {
+                    leaderboardList.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full text-red-400/80 space-y-2 text-sm text-center px-4">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <p>No se pudo conectar con la API en Railway.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderLeaderboard(data) {
+            // Normalizar datos por si la API devuelve un objeto { scores: [...] } o { data: [...] }
+            let scores = Array.isArray(data) ? data : (data.data || data.scores || []);
+            
+            // Ordenar de mayor a menor y tomar top 10
+            scores.sort((a, b) => b.score - a.score);
+            scores = scores.slice(0, 10);
+
+            if (scores.length === 0) {
+                leaderboardList.innerHTML = '<div class="text-center text-slate-500 mt-10">Sin registros aún. ¡Sé el primero!</div>';
+                return;
+            }
+
+            leaderboardList.innerHTML = scores.map((entry, index) => {
+                let rankStyle = "";
+                let medal = "";
+                let bgStyle = "hover:bg-slate-800/60";
+                
+                if (index === 0) {
+                    rankStyle = "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+                    medal = "👑";
+                    bgStyle = "bg-slate-800/40 border border-yellow-500/10 hover:bg-slate-800/60 shadow-[0_0_10px_rgba(234,179,8,0.05)]";
+                } else if (index === 1) {
+                    rankStyle = "bg-slate-300/20 text-slate-300 border-slate-300/30";
+                    bgStyle = "bg-slate-800/20 hover:bg-slate-800/40";
+                } else if (index === 2) {
+                    rankStyle = "bg-amber-600/20 text-amber-500 border-amber-600/30";
+                    bgStyle = "bg-slate-800/10 hover:bg-slate-800/30";
+                } else {
+                    rankStyle = "bg-slate-800 text-slate-500 border-slate-700";
+                }
+
+                // Ajusta las keys 'name' y 'score' según lo que devuelva tu API
+                const playerName = entry.name || entry.jugador || 'Anónimo';
+                const playerScore = entry.score || entry.puntos || entry.puntuacion || 0;
+
+                return `
+                    <div class="grid grid-cols-12 gap-4 items-center px-4 py-3 mb-2 rounded-xl transition-all ${bgStyle}">
+                        <div class="col-span-2 flex justify-center">
+                            <div class="w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold ${rankStyle}">
+                                ${index + 1}
+                            </div>
+                        </div>
+                        <div class="col-span-7 flex items-center gap-2 truncate">
+                            <span class="font-medium text-slate-200 truncate" title="${playerName}">${playerName}</span>
+                            <span class="text-sm">${medal}</span>
+                        </div>
+                        <div class="col-span-3 text-right font-bold text-sky-400">
+                            ${playerScore}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Iniciar polling inicial
+        fetchLeaderboard();
+        setInterval(fetchLeaderboard, 3000);
+
+        // Dibujar estado inicial del canvas antes de empezar
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    </script>
+</body>
+</html>
