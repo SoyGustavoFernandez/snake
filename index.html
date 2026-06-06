@@ -536,16 +536,17 @@
         window.addEventListener('keydown', (e) => {
             const key = e.key.toLowerCase();
             
-            // Evitar scroll con teclas de movimiento
-            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 's', 'a', 'd', ' '].includes(key)) {
-                e.preventDefault();
-            }
-            
-            if (isGameOver && e.key === 'Enter') {
-                if(document.activeElement === playerNameInput) {
+            // Si el usuario está escribiendo en el campo de texto, permitimos el comportamiento por defecto
+            if (document.activeElement === playerNameInput) {
+                if (e.key === 'Enter') {
                     submitScoreBtn.click();
                 }
                 return;
+            }
+            
+            // Evitar scroll con teclas de movimiento
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 's', 'a', 'd', ' '].includes(key)) {
+                e.preventDefault();
             }
             
             if (!gameStarted && e.key === ' ') {
