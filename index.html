@@ -107,11 +107,44 @@
                 </div>
                 
                 <!-- Start Screen Overlay -->
-                <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 rounded-xl z-20 cursor-pointer backdrop-blur-sm">
-                    <div class="bg-sky-500/20 w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-pulse">
-                        <svg class="w-10 h-10 text-sky-400 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 rounded-xl z-20 backdrop-blur-md p-6">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-500 mb-1 tracking-tight">SNAKE QUEST</h2>
+                        <p class="text-slate-400 text-xs font-medium">Selecciona tu Skin e inicia la aventura</p>
                     </div>
-                    <h2 class="text-2xl font-bold text-white mb-2">Click para Jugar</h2>
+
+                    <!-- Skin Grid -->
+                    <div class="grid grid-cols-5 gap-2 mb-8 w-full max-w-[420px]">
+                        <!-- Skin 1 (Active) -->
+                        <button type="button" id="skin-btn-neon-blue" class="skin-btn flex flex-col items-center p-2 rounded-xl border-2 border-sky-500 bg-slate-800/80 transition-all cursor-pointer outline-none" onclick="selectSkin('neon-blue')">
+                            <div class="w-6 h-6 rounded-full bg-[#38bdf8] mb-1 shadow-[0_0_8px_#38bdf8]"></div>
+                            <span class="text-[9px] text-slate-200 font-semibold">Blue</span>
+                        </button>
+                        <!-- Skin 2 -->
+                        <button type="button" id="skin-btn-cyber-green" class="skin-btn flex flex-col items-center p-2 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-all cursor-pointer outline-none" onclick="selectSkin('cyber-green')">
+                            <div class="w-6 h-6 rounded-full bg-[#4ade80] mb-1 shadow-[0_0_8px_#4ade80]"></div>
+                            <span class="text-[9px] text-slate-400 font-semibold">Green</span>
+                        </button>
+                        <!-- Skin 3 -->
+                        <button type="button" id="skin-btn-ruby-fire" class="skin-btn flex flex-col items-center p-2 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-all cursor-pointer outline-none" onclick="selectSkin('ruby-fire')">
+                            <div class="w-6 h-6 rounded-full bg-[#f87171] mb-1 shadow-[0_0_8px_#f87171]"></div>
+                            <span class="text-[9px] text-slate-400 font-semibold">Ruby</span>
+                        </button>
+                        <!-- Skin 4 -->
+                        <button type="button" id="skin-btn-golden-sovereign" class="skin-btn flex flex-col items-center p-2 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-all cursor-pointer outline-none" onclick="selectSkin('golden-sovereign')">
+                            <div class="w-6 h-6 rounded-full bg-[#facc15] mb-1 shadow-[0_0_8px_#facc15]"></div>
+                            <span class="text-[9px] text-slate-400 font-semibold">Gold</span>
+                        </button>
+                        <!-- Skin 5 -->
+                        <button type="button" id="skin-btn-amethyst-void" class="skin-btn flex flex-col items-center p-2 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-all cursor-pointer outline-none" onclick="selectSkin('amethyst-void')">
+                            <div class="w-6 h-6 rounded-full bg-[#c084fc] mb-1 shadow-[0_0_8px_#c084fc]"></div>
+                            <span class="text-[9px] text-slate-400 font-semibold">Amethyst</span>
+                        </button>
+                    </div>
+
+                    <button id="playBtn" class="px-8 py-3 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 rounded-xl font-bold text-white shadow-[0_0_15px_rgba(56,189,248,0.4)] hover:shadow-[0_0_25px_rgba(56,189,248,0.6)] transition-all transform hover:scale-105 text-lg cursor-pointer">
+                        Jugar Ahora
+                    </button>
                 </div>
             </div>
         </div>
@@ -167,6 +200,7 @@
         const submitScoreBtn = document.getElementById('submitScoreBtn');
         const restartBtn = document.getElementById('restartBtn');
         const leaderboardList = document.getElementById('leaderboardList');
+        const playBtn = document.getElementById('playBtn');
 
         // Configuración de la API
         const API_BASE_URL = 'https://snake-production-84d2.up.railway.app';
@@ -190,8 +224,49 @@
         let isGameOver = false;
         let gameStarted = false;
 
-        // Iniciar el juego al hacer click en la pantalla inicial
-        startScreen.addEventListener('click', () => {
+        // Configuración de las Skins (5 opciones)
+        const SKINS = [
+            { id: 'neon-blue', name: 'Blue', headColor: '#38bdf8', bodyColor: 'rgba(14, 165, 233, ', shadowColor: '#38bdf8' },
+            { id: 'cyber-green', name: 'Green', headColor: '#4ade80', bodyColor: 'rgba(34, 197, 94, ', shadowColor: '#4ade80' },
+            { id: 'ruby-fire', name: 'Ruby', headColor: '#f87171', bodyColor: 'rgba(239, 68, 68, ', shadowColor: '#f87171' },
+            { id: 'golden-sovereign', name: 'Gold', headColor: '#facc15', bodyColor: 'rgba(234, 179, 8, ', shadowColor: '#facc15' },
+            { id: 'amethyst-void', name: 'Amethyst', headColor: '#c084fc', bodyColor: 'rgba(168, 85, 247, ', shadowColor: '#c084fc' }
+        ];
+        let currentSkin = SKINS[0];
+
+        // Lógica de Comida Especial (Bonus)
+        let bonusX = null;
+        let bonusY = null;
+        let bonusActive = false;
+        let bonusTimeLeft = 0;
+        let bonusInterval = null;
+        let normalFoodEatenCount = 0;
+
+        // Cambiar la skin seleccionada en la UI
+        function selectSkin(skinId) {
+            const selectedSkin = SKINS.find(s => s.id === skinId);
+            if (!selectedSkin) return;
+            currentSkin = selectedSkin;
+            
+            SKINS.forEach(s => {
+                const btn = document.getElementById(`skin-btn-${s.id}`);
+                if (s.id === skinId) {
+                    btn.classList.remove('border-slate-700', 'bg-slate-800/50');
+                    btn.classList.add('border-sky-500', 'bg-slate-800/80');
+                    btn.querySelector('span').classList.remove('text-slate-400');
+                    btn.querySelector('span').classList.add('text-slate-200');
+                } else {
+                    btn.classList.remove('border-sky-500', 'bg-slate-800/80');
+                    btn.classList.add('border-slate-700', 'bg-slate-800/50');
+                    btn.querySelector('span').classList.remove('text-slate-200');
+                    btn.querySelector('span').classList.add('text-slate-400');
+                }
+            });
+        }
+
+        // Iniciar el juego al hacer click en el botón de Jugar Ahora
+        playBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             startScreen.style.display = 'none';
             resetGame();
         });
@@ -210,6 +285,8 @@
             score = 0;
             isGameOver = false;
             gameStarted = true;
+            normalFoodEatenCount = 0;
+            deactivateBonus();
             
             currentScoreEl.textContent = score;
             
@@ -235,13 +312,61 @@
                 foodY = Math.floor(Math.random() * tileCount);
                 validPosition = true;
                 
-                // Asegurar que la comida no aparezca sobre la serpiente
+                // Asegurar que la comida no aparezca sobre la serpiente ni sobre la comida especial
+                if (bonusActive && foodX === bonusX && foodY === bonusY) {
+                    validPosition = false;
+                    continue;
+                }
                 for (let part of snake) {
                     if (part.x === foodX && part.y === foodY) {
                         validPosition = false;
                         break;
                     }
                 }
+            }
+        }
+
+        function spawnBonusFood() {
+            if (bonusInterval) clearInterval(bonusInterval);
+            let validPosition = false;
+            while (!validPosition) {
+                bonusX = Math.floor(Math.random() * tileCount);
+                bonusY = Math.floor(Math.random() * tileCount);
+                validPosition = true;
+                
+                if (bonusX === foodX && bonusY === foodY) {
+                    validPosition = false;
+                    continue;
+                }
+                for (let part of snake) {
+                    if (part.x === bonusX && part.y === bonusY) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+            }
+            bonusActive = true;
+            bonusTimeLeft = 8; // 8 segundos de duración
+            
+            bonusInterval = setInterval(() => {
+                if (bonusActive) {
+                    bonusTimeLeft--;
+                    if (bonusTimeLeft <= 0) {
+                        deactivateBonus();
+                    }
+                } else {
+                    clearInterval(bonusInterval);
+                }
+            }, 1000);
+        }
+
+        function deactivateBonus() {
+            bonusActive = false;
+            bonusX = null;
+            bonusY = null;
+            if (bonusInterval) {
+                clearInterval(bonusInterval);
+                bonusInterval = null;
             }
         }
 
@@ -277,16 +402,35 @@
 
             snake.unshift(head);
 
-            // Colisión con comida
+            let ateFood = false;
+
+            // Colisión con comida normal
             if (head.x === foodX && head.y === foodY) {
                 score += 10;
                 currentScoreEl.textContent = score;
-                // Efecto visual simple al comer
                 currentScoreEl.classList.add('scale-125', 'text-white');
                 setTimeout(() => currentScoreEl.classList.remove('scale-125', 'text-white'), 150);
                 
+                normalFoodEatenCount++;
+                if (normalFoodEatenCount % 3 === 0) {
+                    spawnBonusFood();
+                }
+                
                 spawnFood();
-            } else {
+                ateFood = true;
+            }
+            // Colisión con comida especial (bonus)
+            else if (bonusActive && head.x === bonusX && head.y === bonusY) {
+                score += 30; // 30 puntos por comer el bonus
+                currentScoreEl.textContent = score;
+                currentScoreEl.classList.add('scale-125', 'text-yellow-400');
+                setTimeout(() => currentScoreEl.classList.remove('scale-125', 'text-yellow-400'), 250);
+                
+                deactivateBonus();
+                ateFood = true; // Hace crecer la cola
+            }
+
+            if (!ateFood) {
                 snake.pop();
             }
         }
@@ -296,7 +440,7 @@
             ctx.fillStyle = '#1e293b';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Dibujar cuadrícula sutil (opcional para un look más tech)
+            // Dibujar cuadrícula sutil
             ctx.strokeStyle = 'rgba(255,255,255,0.03)';
             ctx.lineWidth = 1;
             for(let i=0; i<tileCount; i++) {
@@ -310,25 +454,42 @@
                 ctx.stroke();
             }
 
-            // Dibujar comida (manzana/cubo brillante)
+            // Dibujar comida normal (manzana circular brillante)
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#f43f5e';
             ctx.fillStyle = '#f43f5e';
-            
-            // Comida circular
             ctx.beginPath();
             ctx.arc(foodX * gridSize + gridSize/2, foodY * gridSize + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0; // Resetear sombra para la serpiente
+            ctx.shadowBlur = 0;
 
-            // Dibujar serpiente
+            // Dibujar comida especial (bonus estrella dorada) si está activa
+            if (bonusActive && bonusX !== null && bonusY !== null) {
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#fbbf24';
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(bonusX * gridSize + gridSize/2, bonusY * gridSize + gridSize/2, gridSize/2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Barra de temporizador sobre el bonus
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
+                ctx.fillRect(bonusX * gridSize, bonusY * gridSize - 8, gridSize, 3);
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(bonusX * gridSize, bonusY * gridSize - 8, gridSize * (bonusTimeLeft / 8), 3);
+            }
+
+            // Dibujar serpiente usando la skin seleccionada
             snake.forEach((part, index) => {
                 const isHead = index === 0;
                 
                 if (isHead) {
-                    ctx.fillStyle = '#38bdf8'; // Cabeza más brillante
-                    // Ojos simples de la serpiente
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = currentSkin.shadowColor;
+                    ctx.fillStyle = currentSkin.headColor;
                     ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize, gridSize);
+                    ctx.shadowBlur = 0; // reset shadow
                     
                     ctx.fillStyle = '#0f172a';
                     // Posición de los ojos depende de la dirección
@@ -348,7 +509,7 @@
                 } else {
                     // Gradiente sutil para el cuerpo
                     const opacity = Math.max(0.3, 1 - (index / snake.length));
-                    ctx.fillStyle = `rgba(14, 165, 233, ${opacity})`;
+                    ctx.fillStyle = `${currentSkin.bodyColor}${opacity})`;
                     ctx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
                 }
             });
@@ -358,6 +519,7 @@
             isGameOver = true;
             gameStarted = false;
             clearTimeout(gameLoopTimeout);
+            deactivateBonus();
             finalScoreEl.textContent = score;
             
             // Mostrar modal con animación
@@ -370,10 +532,12 @@
             }, 10);
         }
 
-        // Controles de teclado
+        // Controles de teclado (Soporte Flechas + WASD)
         window.addEventListener('keydown', (e) => {
-            // Evitar scroll con flechas
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+            const key = e.key.toLowerCase();
+            
+            // Evitar scroll con teclas de movimiento
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 's', 'a', 'd', ' '].includes(key)) {
                 e.preventDefault();
             }
             
@@ -385,15 +549,20 @@
             }
             
             if (!gameStarted && e.key === ' ') {
-                startScreen.click();
+                // Iniciar juego con la barra espaciadora
+                if(startScreen.style.display !== 'none') {
+                    playBtn.click();
+                } else {
+                    resetGame();
+                }
                 return;
             }
 
-            // Usamos nextDx/nextDy para evitar el bug de girar 180 grados rápido antes del siguiente frame
-            if (e.key === 'ArrowUp' && dy === 0) { nextDx = 0; nextDy = -1; }
-            if (e.key === 'ArrowDown' && dy === 0) { nextDx = 0; nextDy = 1; }
-            if (e.key === 'ArrowLeft' && dx === 0) { nextDx = -1; nextDy = 0; }
-            if (e.key === 'ArrowRight' && dx === 0) { nextDx = 1; nextDy = 0; }
+            // WASD y Flechas direccionales con prevención de 180° rápidos
+            if ((key === 'arrowup' || key === 'w') && dy === 0) { nextDx = 0; nextDy = -1; }
+            if ((key === 'arrowdown' || key === 's') && dy === 0) { nextDx = 0; nextDy = 1; }
+            if ((key === 'arrowleft' || key === 'a') && dx === 0) { nextDx = -1; nextDy = 0; }
+            if ((key === 'arrowright' || key === 'd') && dx === 0) { nextDx = 1; nextDy = 0; }
         });
 
         // Lógica de Puntuaciones / API
@@ -411,17 +580,14 @@
             submitScoreBtn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Guardando...`;
 
             try {
-                // Preparamos payload (ajusta las keys si tu API espera 'jugador', 'puntos', etc.)
                 const payload = { name: name, score: score };
                 
-                // Intentar endpoint
                 let response = await fetch(`${API_BASE_URL}${ENDPOINT_POST}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
-                // Si da 404, probamos con '/api/scores' como fallback
                 if (response.status === 404) {
                      response = await fetch(`${API_BASE_URL}/api${ENDPOINT_POST}`, {
                         method: 'POST',
@@ -432,7 +598,6 @@
 
                 if (!response.ok) throw new Error('Error en el servidor');
                 
-                // Éxito: forzamos actualización de tabla y reiniciamos
                 await fetchLeaderboard();
                 resetGame();
                 
@@ -474,10 +639,8 @@
         }
 
         function renderLeaderboard(data) {
-            // Normalizar datos por si la API devuelve un objeto { scores: [...] } o { data: [...] }
             let scores = Array.isArray(data) ? data : (data.data || data.scores || []);
             
-            // Ordenar de mayor a menor y tomar top 10
             scores.sort((a, b) => b.score - a.score);
             scores = scores.slice(0, 10);
 
@@ -505,7 +668,6 @@
                     rankStyle = "bg-slate-800 text-slate-500 border-slate-700";
                 }
 
-                // Ajusta las keys 'name' y 'score' según lo que devuelva tu API
                 const playerName = entry.name || entry.jugador || 'Anónimo';
                 const playerScore = entry.score || entry.puntos || entry.puntuacion || 0;
 
