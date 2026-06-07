@@ -212,6 +212,59 @@
                     </button>
                 </div>
             </div>
+            
+            <!-- Guide Legend -->
+            <div class="w-full max-w-[500px] mt-6 glass-panel rounded-2xl p-4 border border-slate-700/50">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <svg class="w-4.5 h-4.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Guía de Elementos y Controles
+                </h3>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <!-- Column 1: Items -->
+                    <div class="space-y-2 border-r border-slate-700/40 pr-3">
+                        <span class="font-bold text-slate-300 block mb-1">Ítems / Frutas</span>
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 flex items-center justify-center bg-red-500/20 text-red-500 rounded-md font-bold text-[10px]">🍎</span>
+                            <div>
+                                <span class="font-semibold text-slate-200">Manzana Normal</span>
+                                <span class="text-slate-400 block text-[9px]">+10 pts y crece la serpiente.</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 flex items-center justify-center bg-yellow-500/20 text-yellow-400 rounded-md font-bold text-[10px] shadow-[0_0_5px_#facc15]">👑</span>
+                            <div>
+                                <span class="font-semibold text-slate-200">Manzana Dorada</span>
+                                <span class="text-slate-400 block text-[9px]">+30 pts. Aparece cada 3 normales por 8s.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Column 2: Powerups -->
+                    <div class="space-y-2 pl-1">
+                        <span class="font-bold text-slate-300 block mb-1">Efectos Especiales (6s)</span>
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 flex items-center justify-center bg-sky-500/20 text-sky-400 rounded-md text-[10px]">⏳</span>
+                            <div>
+                                <span class="font-semibold text-slate-200">Reloj (Cámara Lenta)</span>
+                                <span class="text-slate-400 block text-[9px]">Ralentiza el tiempo de juego global.</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 flex items-center justify-center bg-emerald-500/20 text-emerald-400 rounded-md text-[10px]">🛡️</span>
+                            <div>
+                                <span class="font-semibold text-slate-200">Escudo (Rebote)</span>
+                                <span class="text-slate-400 block text-[9px]">Te salva de un choque y te hace rebotar.</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 flex items-center justify-center bg-purple-500/20 text-purple-400 rounded-md text-[10px]">👻</span>
+                            <div>
+                                <span class="font-semibold text-slate-200">Fantasma (Atravesar)</span>
+                                <span class="text-slate-400 block text-[9px]">Atraviesas cuerpos propios y del oponente.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Leaderboard Section -->
@@ -675,7 +728,16 @@
             // Cargar mapa
             loadMap(mapType);
 
-            // Inicializar Serpientes según el modo de juego
+            // Dinámicamente borrar o agregar los bordes del canvas según el modo
+            if (mapType === 'classic') {
+                canvas.style.border = 'none';
+                canvas.style.boxShadow = 'none';
+            } else {
+                canvas.style.border = '1px solid rgba(56, 189, 248, 0.2)';
+                canvas.style.boxShadow = '0 0 30px rgba(56, 189, 248, 0.2)';
+            }
+
+            // Inicializar Serpientes según el modo de juego (fuera de muros del laberinto)
             if (gameMode === 'solo') {
                 snake1 = [
                     { x: 10, y: 10 },
@@ -685,19 +747,19 @@
                 dx1 = 0; dy1 = -1;
                 nextDx1 = 0; nextDy1 = -1;
             } else {
-                // Modo duelo: Jugador 1 a la izquierda, Jugador 2 a la derecha
+                // Modo duelo: Jugador 1 en carril seguro izquierdo, Jugador 2 en derecho
                 snake1 = [
-                    { x: 5, y: 10 },
-                    { x: 5, y: 11 },
-                    { x: 5, y: 12 }
+                    { x: 3, y: 10 },
+                    { x: 3, y: 11 },
+                    { x: 3, y: 12 }
                 ];
                 dx1 = 0; dy1 = -1;
                 nextDx1 = 0; nextDy1 = -1;
 
                 snake2 = [
-                    { x: 15, y: 10 },
-                    { x: 15, y: 11 },
-                    { x: 15, y: 12 }
+                    { x: 16, y: 10 },
+                    { x: 16, y: 11 },
+                    { x: 16, y: 12 }
                 ];
                 dx2 = 0; dy2 = -1;
                 nextDx2 = 0; nextDy2 = -1;
@@ -848,10 +910,27 @@
                 dx2 = nextDx2; dy2 = nextDy2;
             }
 
-            const head1 = { x: snake1[0].x + dx1, y: snake1[0].y + dy1 };
+            let head1 = { x: snake1[0].x + dx1, y: snake1[0].y + dy1 };
             let head2 = null;
             if (gameMode === 'duelo') {
                 head2 = { x: snake2[0].x + dx2, y: snake2[0].y + dy2 };
+            }
+
+            // Wrap around para el modo Clásico (sin obstáculos)
+            if (mapType === 'classic') {
+                if (head1.x < 0) head1.x = tileCount - 1;
+                else if (head1.x >= tileCount) head1.x = 0;
+                
+                if (head1.y < 0) head1.y = tileCount - 1;
+                else if (head1.y >= tileCount) head1.y = 0;
+
+                if (gameMode === 'duelo' && head2) {
+                    if (head2.x < 0) head2.x = tileCount - 1;
+                    else if (head2.x >= tileCount) head2.x = 0;
+                    
+                    if (head2.y < 0) head2.y = tileCount - 1;
+                    else if (head2.y >= tileCount) head2.y = 0;
+                }
             }
 
             let collisionJ1 = false;
@@ -1093,6 +1172,14 @@
                 p2Leading = score2 > score1;
             }
 
+            // Dimensiones para hacer el gráfico de las serpientes 10% más grande y centrado
+            const headSize = gridSize * 1.1; // 27.5px
+            const headOffset = (gridSize - headSize) / 2; // -1.25px
+
+            const bodySize = (gridSize - 2) * 1.1; // 25.3px
+            const bodyOffset = (gridSize - bodySize) / 2; // -0.15px
+            const eyeSize = 4.4; // 10% más grandes que 4px
+
             // Dibujar Serpiente 1
             snake1.forEach((part, index) => {
                 const isHead = index === 0;
@@ -1100,29 +1187,32 @@
                     ctx.shadowBlur = 10;
                     ctx.shadowColor = skinJ1.shadowColor;
                     
+                    const hX = part.x * gridSize + headOffset;
+                    const hY = part.y * gridSize + headOffset;
+
                     if (shieldActive1) {
                         ctx.strokeStyle = '#22c55e';
                         ctx.lineWidth = 3;
-                        ctx.strokeRect(part.x * gridSize - 1, part.y * gridSize - 1, gridSize + 2, gridSize + 2);
+                        ctx.strokeRect(hX - 1, hY - 1, headSize + 2, headSize + 2);
                     }
                     
                     ctx.fillStyle = skinJ1.headColor;
-                    ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize, gridSize);
+                    ctx.fillRect(hX, hY, headSize, headSize);
                     ctx.shadowBlur = 0;
 
                     ctx.fillStyle = '#0f172a';
                     if(dx1 === 1) {
-                        ctx.fillRect(part.x * gridSize + 15, part.y * gridSize + 5, 4, 4);
-                        ctx.fillRect(part.x * gridSize + 15, part.y * gridSize + 16, 4, 4);
+                        ctx.fillRect(hX + 16.5, hY + 5.5, eyeSize, eyeSize);
+                        ctx.fillRect(hX + 16.5, hY + 17.6, eyeSize, eyeSize);
                     } else if(dx1 === -1) {
-                        ctx.fillRect(part.x * gridSize + 6, part.y * gridSize + 5, 4, 4);
-                        ctx.fillRect(part.x * gridSize + 6, part.y * gridSize + 16, 4, 4);
+                        ctx.fillRect(hX + 6.6, hY + 5.5, eyeSize, eyeSize);
+                        ctx.fillRect(hX + 6.6, hY + 17.6, eyeSize, eyeSize);
                     } else if(dy1 === -1) {
-                        ctx.fillRect(part.x * gridSize + 5, part.y * gridSize + 6, 4, 4);
-                        ctx.fillRect(part.x * gridSize + 16, part.y * gridSize + 6, 4, 4);
+                        ctx.fillRect(hX + 5.5, hY + 6.6, eyeSize, eyeSize);
+                        ctx.fillRect(hX + 17.6, hY + 6.6, eyeSize, eyeSize);
                     } else {
-                        ctx.fillRect(part.x * gridSize + 5, part.y * gridSize + 15, 4, 4);
-                        ctx.fillRect(part.x * gridSize + 16, part.y * gridSize + 15, 4, 4);
+                        ctx.fillRect(hX + 5.5, hY + 16.5, eyeSize, eyeSize);
+                        ctx.fillRect(hX + 17.6, hY + 16.5, eyeSize, eyeSize);
                     }
                     
                     if (p1Leading) {
@@ -1133,7 +1223,7 @@
                 } else {
                     const opacity = Math.max(0.2, 1 - (index / snake1.length));
                     ctx.fillStyle = ghostActive1 ? `rgba(168, 85, 247, ${opacity * 0.5})` : `${skinJ1.bodyColor}${opacity})`;
-                    ctx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
+                    ctx.fillRect(part.x * gridSize + bodyOffset, part.y * gridSize + bodyOffset, bodySize, bodySize);
                 }
             });
 
@@ -1145,29 +1235,32 @@
                         ctx.shadowBlur = 10;
                         ctx.shadowColor = skinJ2.shadowColor;
                         
+                        const hX = part.x * gridSize + headOffset;
+                        const hY = part.y * gridSize + headOffset;
+
                         if (shieldActive2) {
                             ctx.strokeStyle = '#22c55e';
                             ctx.lineWidth = 3;
-                            ctx.strokeRect(part.x * gridSize - 1, part.y * gridSize - 1, gridSize + 2, gridSize + 2);
+                            ctx.strokeRect(hX - 1, hY - 1, headSize + 2, headSize + 2);
                         }
                         
                         ctx.fillStyle = skinJ2.headColor;
-                        ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize, gridSize);
+                        ctx.fillRect(hX, hY, headSize, headSize);
                         ctx.shadowBlur = 0;
 
                         ctx.fillStyle = '#0f172a';
                         if(dx2 === 1) {
-                            ctx.fillRect(part.x * gridSize + 15, part.y * gridSize + 5, 4, 4);
-                            ctx.fillRect(part.x * gridSize + 15, part.y * gridSize + 16, 4, 4);
+                            ctx.fillRect(hX + 16.5, hY + 5.5, eyeSize, eyeSize);
+                            ctx.fillRect(hX + 16.5, hY + 17.6, eyeSize, eyeSize);
                         } else if(dx2 === -1) {
-                            ctx.fillRect(part.x * gridSize + 6, part.y * gridSize + 5, 4, 4);
-                            ctx.fillRect(part.x * gridSize + 6, part.y * gridSize + 16, 4, 4);
+                            ctx.fillRect(hX + 6.6, hY + 5.5, eyeSize, eyeSize);
+                            ctx.fillRect(hX + 6.6, hY + 17.6, eyeSize, eyeSize);
                         } else if(dy2 === -1) {
-                            ctx.fillRect(part.x * gridSize + 5, part.y * gridSize + 6, 4, 4);
-                            ctx.fillRect(part.x * gridSize + 16, part.y * gridSize + 6, 4, 4);
+                            ctx.fillRect(hX + 5.5, hY + 6.6, eyeSize, eyeSize);
+                            ctx.fillRect(hX + 17.6, hY + 6.6, eyeSize, eyeSize);
                         } else {
-                            ctx.fillRect(part.x * gridSize + 5, part.y * gridSize + 15, 4, 4);
-                            ctx.fillRect(part.x * gridSize + 16, part.y * gridSize + 15, 4, 4);
+                            ctx.fillRect(hX + 5.5, hY + 16.5, eyeSize, eyeSize);
+                            ctx.fillRect(hX + 17.6, hY + 16.5, eyeSize, eyeSize);
                         }
                         
                         if (p2Leading) {
@@ -1178,7 +1271,7 @@
                     } else {
                         const opacity = Math.max(0.2, 1 - (index / snake2.length));
                         ctx.fillStyle = ghostActive2 ? `rgba(168, 85, 247, ${opacity * 0.5})` : `${skinJ2.bodyColor}${opacity})`;
-                        ctx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
+                        ctx.fillRect(part.x * gridSize + bodyOffset, part.y * gridSize + bodyOffset, bodySize, bodySize);
                     }
                 });
             }
