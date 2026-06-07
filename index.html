@@ -1523,8 +1523,9 @@
         window.addEventListener('keydown', (e) => {
             const key = e.key.toLowerCase();
             
-            if (document.activeElement === playerNameInput) {
-                if (e.key === 'Enter') {
+            // Si el usuario está escribiendo en algún campo de texto, no interceptar controles del juego
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+                if (document.activeElement === playerNameInput && e.key === 'Enter') {
                     submitScoreBtn.click();
                 }
                 return;
