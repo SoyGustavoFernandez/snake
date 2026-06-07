@@ -671,6 +671,78 @@
             resetGame();
         });
 
+        function resetGame() {
+            // Cargar mapa
+            loadMap(mapType);
+
+            // Inicializar Serpientes según el modo de juego
+            if (gameMode === 'solo') {
+                snake1 = [
+                    { x: 10, y: 10 },
+                    { x: 10, y: 11 },
+                    { x: 10, y: 12 }
+                ];
+                dx1 = 0; dy1 = -1;
+                nextDx1 = 0; nextDy1 = -1;
+            } else {
+                // Modo duelo: Jugador 1 a la izquierda, Jugador 2 a la derecha
+                snake1 = [
+                    { x: 5, y: 10 },
+                    { x: 5, y: 11 },
+                    { x: 5, y: 12 }
+                ];
+                dx1 = 0; dy1 = -1;
+                nextDx1 = 0; nextDy1 = -1;
+
+                snake2 = [
+                    { x: 15, y: 10 },
+                    { x: 15, y: 11 },
+                    { x: 15, y: 12 }
+                ];
+                dx2 = 0; dy2 = -1;
+                nextDx2 = 0; nextDy2 = -1;
+            }
+
+            score1 = 0;
+            score2 = 0;
+            winningScore = 0;
+            currentScoreEl.textContent = '0';
+            p2ScoreEl.textContent = '0';
+
+            isGameOver = false;
+            gameStarted = true;
+            normalFoodEatenCount = 0;
+
+            deactivateBonus();
+            deactivateActivePowerUp();
+
+            // Spawnear comida inicial
+            spawnFood();
+
+            // Intervalo para power-ups (cada 15s)
+            if (powerUpSpawnInterval) clearInterval(powerUpSpawnInterval);
+            powerUpSpawnInterval = setInterval(spawnPowerUp, 15000);
+
+            // Audio FX Init
+            AudioFX.init();
+
+            // Resetear partículas
+            particles = [];
+
+            // Ocultar modal con animación
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                gameOverModal.classList.add('hidden');
+                gameOverModal.classList.remove('flex');
+            }, 200);
+
+            playerNameInput.value = '';
+
+            if (gameLoopTimeout) clearTimeout(gameLoopTimeout);
+            gameLoop();
+        }
+
         function spawnFood() {
             let valid = false;
             while (!valid) {
