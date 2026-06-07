@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snake Game Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
@@ -126,12 +127,40 @@
                         <!-- Modo de Juego -->
                         <div>
                             <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Modo de Juego</span>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button type="button" id="mode-btn-solo" class="py-2 px-3 rounded-xl border-2 border-sky-500 bg-slate-800/80 font-bold text-sm text-sky-400 transition-all cursor-pointer outline-none" onclick="selectMode('solo')">
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" id="mode-btn-solo" class="py-2 px-1 rounded-xl border-2 border-sky-500 bg-slate-800/80 font-bold text-xs text-sky-400 transition-all cursor-pointer outline-none" onclick="selectMode('solo')">
                                     👤 Solitario
                                 </button>
-                                <button type="button" id="mode-btn-duelo" class="py-2 px-3 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-sm text-slate-400 transition-all cursor-pointer outline-none" onclick="selectMode('duelo')">
-                                    ⚔️ Duelo (Local)
+                                <button type="button" id="mode-btn-duelo" class="py-2 px-1 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-xs text-slate-400 transition-all cursor-pointer outline-none" onclick="selectMode('duelo')">
+                                    ⚔️ Duelo
+                                </button>
+                                <button type="button" id="mode-btn-online" class="py-2 px-1 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-xs text-slate-400 transition-all cursor-pointer outline-none" onclick="selectMode('online')">
+                                    🌐 Online
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Opciones Online (Solo visible en Modo Online) -->
+                        <div id="onlineOptions" class="hidden space-y-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Conexión Online</span>
+                            <input type="text" id="onlinePlayerName" maxlength="12" placeholder="Tu Nombre Online..." class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-500">
+                            
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" id="online-quick-btn" class="py-2 px-1 rounded-xl bg-sky-600 hover:bg-sky-500 font-bold text-[10px] text-white transition-all cursor-pointer outline-none" onclick="startOnlineQuickMatch()">
+                                    ⚡ Rápida
+                                </button>
+                                <button type="button" id="online-create-btn" class="py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-[10px] text-white transition-all cursor-pointer outline-none" onclick="createPrivateRoom()">
+                                    ➕ Crear Sala
+                                </button>
+                                <button type="button" id="online-join-btn" class="py-2 px-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-[10px] text-white transition-all cursor-pointer outline-none" onclick="toggleJoinCodeInput()">
+                                    🔑 Unirse
+                                </button>
+                            </div>
+                            
+                            <div id="roomCodeContainer" class="hidden flex gap-2">
+                                <input type="text" id="onlineRoomCode" placeholder="Código" maxlength="6" class="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs text-center uppercase tracking-widest focus:outline-none focus:border-indigo-500">
+                                <button type="button" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold cursor-pointer" onclick="joinPrivateRoom()">
+                                    OK
                                 </button>
                             </div>
                         </div>
@@ -209,6 +238,49 @@
 
                     <button id="playBtn" class="px-8 py-3 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 rounded-xl font-bold text-white shadow-[0_0_15px_rgba(56,189,248,0.4)] hover:shadow-[0_0_25px_rgba(56,189,248,0.6)] transition-all transform hover:scale-105 text-lg cursor-pointer mb-2 w-full max-w-[420px]">
                         Jugar Ahora
+                    </button>
+
+                    <!-- Online Lobby Overlay (para sala rápida o privada) -->
+                    <div id="onlineLobbyOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/98 rounded-xl z-30 hidden p-6 text-center">
+                        <div class="w-16 h-16 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mb-6"></div>
+                        <h3 id="lobbyStatusTitle" class="text-2xl font-bold text-white mb-2">Conectando...</h3>
+                        <p id="lobbyStatusDesc" class="text-slate-400 text-sm mb-6">Buscando oponente en Railway...</p>
+                        
+                        <!-- Sala Privada Code Display -->
+                        <div id="lobbyRoomCodeBox" class="hidden p-4 bg-slate-800/80 rounded-2xl border border-indigo-500/30 mb-6 w-full max-w-[280px]">
+                            <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider block mb-1">Código de Sala</span>
+                            <span id="lobbyRoomCode" class="text-3xl font-extrabold text-white tracking-widest">XXXXXX</span>
+                        </div>
+                        
+                        <button type="button" id="cancelLobbyBtn" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-sm font-semibold transition-all">
+                            Cancelar y Salir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Virtual D-Pad (Táctil) -->
+            <div id="virtualDPad" class="w-full max-w-[500px] mt-4 flex justify-center items-center gap-4 hidden">
+                <div class="relative w-36 h-36 flex items-center justify-center">
+                    <!-- Up -->
+                    <button type="button" id="dpad-up" class="absolute top-0 w-12 h-12 rounded-xl glass-panel border border-sky-500/30 hover:bg-sky-500/20 flex items-center justify-center text-lg active:scale-95 transition-all select-none text-sky-400 font-bold">
+                        ▲
+                    </button>
+                    <!-- Left -->
+                    <button type="button" id="dpad-left" class="absolute left-0 w-12 h-12 rounded-xl glass-panel border border-sky-500/30 hover:bg-sky-500/20 flex items-center justify-center text-lg active:scale-95 transition-all select-none text-sky-400 font-bold">
+                        ◀
+                    </button>
+                    <!-- Center decorative logo -->
+                    <div class="w-10 h-10 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center text-xs text-sky-400 font-extrabold shadow-inner select-none">
+                        🎮
+                    </div>
+                    <!-- Right -->
+                    <button type="button" id="dpad-right" class="absolute right-0 w-12 h-12 rounded-xl glass-panel border border-sky-500/30 hover:bg-sky-500/20 flex items-center justify-center text-lg active:scale-95 transition-all select-none text-sky-400 font-bold">
+                        ▶
+                    </button>
+                    <!-- Down -->
+                    <button type="button" id="dpad-down" class="absolute bottom-0 w-12 h-12 rounded-xl glass-panel border border-sky-500/30 hover:bg-sky-500/20 flex items-center justify-center text-lg active:scale-95 transition-all select-none text-sky-400 font-bold">
+                        ▼
                     </button>
                 </div>
             </div>
@@ -328,6 +400,25 @@
         // Contenedores de selección en la UI
         const skin2Container = document.getElementById('skin2Container');
         const skin1Label = document.getElementById('skin1Label');
+
+        // Elementos de la UI online
+        const onlineOptions = document.getElementById('onlineOptions');
+        const onlinePlayerNameInput = document.getElementById('onlinePlayerName');
+        const roomCodeContainer = document.getElementById('roomCodeContainer');
+        const onlineRoomCodeInput = document.getElementById('onlineRoomCode');
+        const onlineLobbyOverlay = document.getElementById('onlineLobbyOverlay');
+        const lobbyStatusTitle = document.getElementById('lobbyStatusTitle');
+        const lobbyStatusDesc = document.getElementById('lobbyStatusDesc');
+        const lobbyRoomCodeBox = document.getElementById('lobbyRoomCodeBox');
+        const lobbyRoomCodeText = document.getElementById('lobbyRoomCode');
+        const cancelLobbyBtn = document.getElementById('cancelLobbyBtn');
+
+        // Variables de red / SignalR
+        let connection = null;
+        let onlineRoomCode = null;
+        let onlinePlayerIndex = 1; // 1 = Host, 2 = Guest
+        let opponentName = "Rival";
+        let opponentSkin = "cyber-green";
 
         // Configuración de la API
         const API_BASE_URL = 'https://snake-production-84d2.up.railway.app';
@@ -559,23 +650,42 @@
             gameMode = mode;
             const soloBtn = document.getElementById('mode-btn-solo');
             const dueloBtn = document.getElementById('mode-btn-duelo');
+            const onlineBtn = document.getElementById('mode-btn-online');
             
+            // Resetear estilos de todos los botones
+            soloBtn.className = "py-2 px-1 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-xs text-slate-400 transition-all cursor-pointer outline-none";
+            dueloBtn.className = "py-2 px-1 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-xs text-slate-400 transition-all cursor-pointer outline-none";
+            onlineBtn.className = "py-2 px-1 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-xs text-slate-400 transition-all cursor-pointer outline-none";
+
+            // Ocultar opciones online y mostrar playBtn por defecto
+            onlineOptions.classList.add('hidden');
+            playBtn.classList.remove('hidden');
+
             if (mode === 'solo') {
-                soloBtn.className = "py-2 px-3 rounded-xl border-2 border-sky-500 bg-slate-800/80 font-bold text-sm text-sky-400 transition-all cursor-pointer outline-none";
-                dueloBtn.className = "py-2 px-3 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-sm text-slate-400 transition-all cursor-pointer outline-none";
+                soloBtn.className = "py-2 px-1 rounded-xl border-2 border-sky-500 bg-slate-800/80 font-bold text-xs text-sky-400 transition-all cursor-pointer outline-none";
                 skin2Container.classList.add('hidden');
                 skin1Label.textContent = "Skin del Jugador";
                 p2ScoreBox.classList.add('hidden');
                 p1Label.textContent = "Puntuación";
-                controlsHelp.textContent = "Usa las flechas de tu teclado para jugar";
-            } else {
-                soloBtn.className = "py-2 px-3 rounded-xl border-2 border-slate-700 bg-slate-800/40 hover:bg-slate-800/60 font-bold text-sm text-slate-400 transition-all cursor-pointer outline-none";
-                dueloBtn.className = "py-2 px-3 rounded-xl border-2 border-sky-500 bg-slate-800/80 font-bold text-sm text-sky-400 transition-all cursor-pointer outline-none";
+                controlsHelp.textContent = "Usa las flechas de tu teclado o D-Pad táctil";
+            } else if (mode === 'duelo') {
+                dueloBtn.className = "py-2 px-1 rounded-xl border-2 border-sky-500 bg-slate-800/80 font-bold text-xs text-sky-400 transition-all cursor-pointer outline-none";
                 skin2Container.classList.remove('hidden');
                 skin1Label.textContent = "Skin Jugador 1 (Flechas)";
                 p2ScoreBox.classList.remove('hidden');
                 p1Label.textContent = "J1 (Flechas)";
                 controlsHelp.textContent = "J1: Flechas | J2: Teclas WASD";
+            } else if (mode === 'online') {
+                onlineBtn.className = "py-2 px-1 rounded-xl border-2 border-sky-500 bg-slate-800/80 font-bold text-xs text-sky-400 transition-all cursor-pointer outline-none";
+                skin2Container.classList.add('hidden');
+                skin1Label.textContent = "Tu Skin";
+                p2ScoreBox.classList.remove('hidden');
+                p1Label.textContent = "Tú";
+                controlsHelp.textContent = "Controla con las Flechas o el D-Pad táctil";
+                
+                // Ocultar playBtn principal y mostrar controles online
+                playBtn.classList.add('hidden');
+                onlineOptions.classList.remove('hidden');
             }
         }
 
@@ -725,6 +835,19 @@
         });
 
         function resetGame() {
+            if (gameMode === 'online') {
+                if (connection) {
+                    connection.send("LeaveRoom").catch(err => console.error("Error al salir de la sala:", err));
+                }
+                startScreen.style.display = 'flex';
+                gameOverModal.classList.add('hidden');
+                gameOverModal.classList.remove('flex');
+                isGameOver = false;
+                gameStarted = false;
+                updateDPadVisibility();
+                return;
+            }
+
             // Cargar mapa
             loadMap(mapType);
 
@@ -800,6 +923,8 @@
             }, 200);
 
             playerNameInput.value = '';
+
+            updateDPadVisibility();
 
             if (gameLoopTimeout) clearTimeout(gameLoopTimeout);
             gameLoop();
@@ -887,12 +1012,29 @@
 
         function gameLoop() {
             if (isGameOver || !gameStarted) return;
+            if (gameMode === 'online' && onlinePlayerIndex === 2) return; // El Cliente no corre el loop local
 
             update();
             draw();
+
+            // Si es modo online y somos el Host (J1), enviamos el estado al Cliente (J2)
+            if (gameMode === 'online' && onlinePlayerIndex === 1) {
+                const state = {
+                    snake1, snake2,
+                    dx1, dy1, dx2, dy2,
+                    score1, score2,
+                    foodX, foodY,
+                    bonusX, bonusY, bonusActive, bonusTimeLeft,
+                    powerUpX, powerUpY, powerUpOnMapType,
+                    powerUpActiveType, powerUpTimeLeft,
+                    isGameOver: false
+                };
+                connection.send("SendState", onlineRoomCode, JSON.stringify(state))
+                    .catch(err => console.error("Error al enviar estado:", err));
+            }
             
             let speed = Math.max(65, 120 - (score1 * 1.5));
-            if (gameMode === 'duelo') {
+            if (gameMode === 'duelo' || gameMode === 'online') {
                 const maxScore = Math.max(score1, score2);
                 speed = Math.max(65, 120 - (maxScore * 1.5));
             }
@@ -1304,8 +1446,42 @@
             deactivateBonus();
             deactivateActivePowerUp();
             if (powerUpSpawnInterval) clearInterval(powerUpSpawnInterval);
+
+            // Enviar estado final si somos el Host
+            if (gameMode === 'online' && onlinePlayerIndex === 1 && connection) {
+                const finalState = {
+                    snake1, snake2,
+                    dx1, dy1, dx2, dy2,
+                    score1, score2,
+                    foodX, foodY,
+                    bonusX, bonusY, bonusActive, bonusTimeLeft,
+                    powerUpX, powerUpY, powerUpOnMapType,
+                    powerUpActiveType, powerUpTimeLeft,
+                    isGameOver: true,
+                    gameOverReason: reason
+                };
+                connection.send("SendState", onlineRoomCode, JSON.stringify(finalState))
+                    .catch(err => console.error("Error al enviar estado final:", err));
+            }
             
-            if (gameMode === 'solo') {
+            if (gameMode === 'online') {
+                const myScore = (onlinePlayerIndex === 1) ? score1 : score2;
+                const oppScore = (onlinePlayerIndex === 1) ? score2 : score1;
+                winningScore = myScore;
+                
+                if (reason === 'empate') {
+                    gameOverTitle.textContent = "¡Empate técnico!";
+                    gameOverText.innerHTML = `Ambos chocaron en el mismo instante.<br>Puntos: ${myScore}`;
+                } else if ((reason === 'j1' && onlinePlayerIndex === 1) || (reason === 'j2' && onlinePlayerIndex === 2)) {
+                    gameOverTitle.textContent = "¡Victoria!";
+                    gameOverText.innerHTML = `¡Ganaste la arena con <span class="font-bold text-sky-400 text-2xl">${myScore}</span> puntos! (Rival: ${oppScore} pts)`;
+                } else {
+                    gameOverTitle.textContent = "¡Derrota!";
+                    gameOverText.innerHTML = `Tu rival ganó. Puntos: ${myScore} (Rival: ${oppScore} pts)`;
+                }
+                
+                playerNameInput.placeholder = "Tu nombre para el Leaderboard...";
+            } else if (gameMode === 'solo') {
                 gameOverTitle.textContent = "¡Fin del Juego!";
                 gameOverText.innerHTML = `Conseguiste <span id="finalScore" class="font-bold text-sky-400 text-2xl">${score1}</span> puntos`;
                 winningScore = score1;
@@ -1331,6 +1507,9 @@
             
             finalScoreEl.textContent = winningScore;
             
+            // Ocultar D-pad al terminar
+            updateDPadVisibility();
+
             gameOverModal.classList.remove('hidden');
             gameOverModal.classList.add('flex');
             setTimeout(() => {
@@ -1364,11 +1543,11 @@
                 return;
             }
 
-            // CONTROLES JUGADOR 1 (Flechas)
-            if (e.key === 'ArrowUp' && dy1 === 0) { nextDx1 = 0; nextDy1 = -1; }
-            if (e.key === 'ArrowDown' && dy1 === 0) { nextDx1 = 0; nextDy1 = 1; }
-            if (e.key === 'ArrowLeft' && dx1 === 0) { nextDx1 = -1; nextDy1 = 0; }
-            if (e.key === 'ArrowRight' && dx1 === 0) { nextDx1 = 1; nextDy1 = 0; }
+            // CONTROLES JUGADOR 1 / ONLINE (Flechas)
+            if (e.key === 'ArrowUp') handleDirectionInput('up');
+            if (e.key === 'ArrowDown') handleDirectionInput('down');
+            if (e.key === 'ArrowLeft') handleDirectionInput('left');
+            if (e.key === 'ArrowRight') handleDirectionInput('right');
 
             // CONTROLES JUGADOR 2 (WASD) en modo Duelo
             if (gameMode === 'duelo') {
@@ -1503,6 +1682,396 @@
         // Polling de puntuaciones
         fetchLeaderboard();
         setInterval(fetchLeaderboard, 3000);
+
+        // ==========================================
+        // SISTEMA TÁCTIL (VIRTUAL D-PAD)
+        // ==========================================
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+        
+        function updateDPadVisibility() {
+            const virtualDPad = document.getElementById('virtualDPad');
+            if (isTouchDevice && gameStarted && !isGameOver) {
+                virtualDPad.classList.remove('hidden');
+            } else {
+                virtualDPad.classList.add('hidden');
+            }
+        }
+
+        function handleDirectionInput(direction) {
+            if (isGameOver || !gameStarted) return;
+            
+            if (gameMode === 'online') {
+                if (onlinePlayerIndex === 1) {
+                    // Host controla localmente a la Serpiente 1
+                    if (direction === 'up' && dy1 === 0) { nextDx1 = 0; nextDy1 = -1; }
+                    if (direction === 'down' && dy1 === 0) { nextDx1 = 0; nextDy1 = 1; }
+                    if (direction === 'left' && dx1 === 0) { nextDx1 = -1; nextDy1 = 0; }
+                    if (direction === 'right' && dx1 === 0) { nextDx1 = 1; nextDy1 = 0; }
+                } else {
+                    // Cliente envía petición de movimiento al Host via SignalR
+                    sendOnlineInput(direction);
+                }
+            } else {
+                // Modo Solitario o Duelo Local: D-Pad controla a J1
+                if (direction === 'up' && dy1 === 0) { nextDx1 = 0; nextDy1 = -1; }
+                if (direction === 'down' && dy1 === 0) { nextDx1 = 0; nextDy1 = 1; }
+                if (direction === 'left' && dx1 === 0) { nextDx1 = -1; nextDy1 = 0; }
+                if (direction === 'right' && dx1 === 0) { nextDx1 = 1; nextDy1 = 0; }
+            }
+        }
+
+        // Asignación de eventos touch y click al D-Pad
+        document.getElementById('dpad-up').addEventListener('touchstart', (e) => { e.preventDefault(); handleDirectionInput('up'); });
+        document.getElementById('dpad-down').addEventListener('touchstart', (e) => { e.preventDefault(); handleDirectionInput('down'); });
+        document.getElementById('dpad-left').addEventListener('touchstart', (e) => { e.preventDefault(); handleDirectionInput('left'); });
+        document.getElementById('dpad-right').addEventListener('touchstart', (e) => { e.preventDefault(); handleDirectionInput('right'); });
+        
+        document.getElementById('dpad-up').addEventListener('click', () => handleDirectionInput('up'));
+        document.getElementById('dpad-down').addEventListener('click', () => handleDirectionInput('down'));
+        document.getElementById('dpad-left').addEventListener('click', () => handleDirectionInput('left'));
+        document.getElementById('dpad-right').addEventListener('click', () => handleDirectionInput('right'));
+
+        // ==========================================
+        // CONEXIÓN Y MULTIJUGADOR ONLINE (SIGNALR)
+        // ==========================================
+        async function initSignalR() {
+            if (connection) return;
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(`${API_BASE_URL}/gamehub`)
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("WaitingInLobby", () => {
+                lobbyStatusTitle.textContent = "Buscando Oponente...";
+                lobbyStatusDesc.textContent = "Buscando un rival en Railway, ten paciencia...";
+                lobbyRoomCodeBox.classList.add('hidden');
+            });
+
+            connection.on("RoomCreated", (code) => {
+                onlineRoomCode = code;
+                lobbyStatusTitle.textContent = "Sala Privada Creada";
+                lobbyStatusDesc.textContent = "Comparte este código con tu amigo para jugar:";
+                lobbyRoomCodeBox.classList.remove('hidden');
+                lobbyRoomCodeText.textContent = code;
+            });
+
+            connection.on("RoomError", (message) => {
+                alert(message);
+                hideLobbyOverlay();
+            });
+
+            connection.on("MatchFound", (roomCode, playerIndex, oppName, oppSkinId) => {
+                onlineRoomCode = roomCode;
+                onlinePlayerIndex = playerIndex;
+                opponentName = oppName;
+                opponentSkin = oppSkinId;
+                
+                startGameOnline();
+            });
+
+            connection.on("ReceiveState", (stateJson) => {
+                applyStateReceived(stateJson);
+            });
+
+            connection.on("ReceiveInput", (directionJson) => {
+                applyInputReceived(directionJson);
+            });
+
+            connection.on("OpponentDisconnected", () => {
+                triggerOpponentDisconnect();
+            });
+
+            try {
+                await connection.start();
+                console.log("Conectado al Hub de SignalR");
+            } catch (err) {
+                console.error("Error al iniciar SignalR:", err);
+                alert("No se pudo establecer conexión con el servidor multijugador.");
+                hideLobbyOverlay();
+                throw err;
+            }
+        }
+
+        // Obtener el nombre del jugador online con validación
+        function getOnlineName() {
+            const name = onlinePlayerNameInput.value.trim();
+            if (!name) {
+                onlinePlayerNameInput.classList.add('border-red-500', 'ring-red-500/20');
+                setTimeout(() => onlinePlayerNameInput.classList.remove('border-red-500', 'ring-red-500/20'), 1000);
+                return null;
+            }
+            return name;
+        }
+
+        async function startOnlineQuickMatch() {
+            const name = getOnlineName();
+            if (!name) return;
+
+            showLobbyOverlay("Conectando...", "Estableciendo conexión con Railway...", false);
+            try {
+                await initSignalR();
+                await connection.send("JoinLobby", name, skinJ1.id);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function createPrivateRoom() {
+            const name = getOnlineName();
+            if (!name) return;
+
+            showLobbyOverlay("Creando Sala...", "Generando código de sala privada...", false);
+            try {
+                await initSignalR();
+                await connection.send("CreatePrivateRoom", name, skinJ1.id);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function toggleJoinCodeInput() {
+            roomCodeContainer.classList.toggle('hidden');
+            onlineRoomCodeInput.focus();
+        }
+
+        async function joinPrivateRoom() {
+            const name = getOnlineName();
+            if (!name) return;
+            
+            const code = onlineRoomCodeInput.value.trim().toUpperCase();
+            if (!code || code.length !== 6) {
+                onlineRoomCodeInput.classList.add('border-red-500');
+                setTimeout(() => onlineRoomCodeInput.classList.remove('border-red-500'), 1000);
+                return;
+            }
+
+            showLobbyOverlay("Uniéndose...", `Buscando la sala ${code}...`, false);
+            try {
+                await initSignalR();
+                await connection.send("JoinPrivateRoom", code, name, skinJ1.id);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function showLobbyOverlay(title, desc, showCodeBox, codeText = "") {
+            lobbyStatusTitle.textContent = title;
+            lobbyStatusDesc.textContent = desc;
+            if (showCodeBox) {
+                lobbyRoomCodeBox.classList.remove('hidden');
+                lobbyRoomCodeText.textContent = codeText;
+            } else {
+                lobbyRoomCodeBox.classList.add('hidden');
+            }
+            onlineLobbyOverlay.classList.remove('hidden');
+        }
+
+        function hideLobbyOverlay() {
+            onlineLobbyOverlay.classList.add('hidden');
+        }
+
+        // Evento para el botón Cancelar en el Lobby
+        cancelLobbyBtn.addEventListener('click', async () => {
+            if (connection) {
+                try {
+                    await connection.send("LeaveRoom");
+                } catch (err) {
+                    console.error("Error al salir de la sala:", err);
+                }
+            }
+            hideLobbyOverlay();
+        });
+
+        // Configuración y arranque de partida Online
+        function startGameOnline() {
+            hideLobbyOverlay();
+            startScreen.style.display = 'none';
+
+            // Configurar skins basándose en si somos Host (J1) o Cliente (J2)
+            const oppSkinObj = SKINS.find(s => s.id === opponentSkin) || SKINS[1];
+            if (onlinePlayerIndex === 1) {
+                skinJ1 = skinJ1; // Se mantiene la nuestra como J1
+                skinJ2 = oppSkinObj; // J2 es el oponente
+            } else {
+                skinJ2 = skinJ1; // Nuestra skin es la de J2
+                skinJ1 = oppSkinObj; // J1 es el oponente
+            }
+
+            // Iniciar variables de puntuación y mapa
+            loadMap(mapType);
+            
+            // Dinámicamente borrar o agregar los bordes del canvas según el modo
+            if (mapType === 'classic') {
+                canvas.style.border = 'none';
+                canvas.style.boxShadow = 'none';
+            } else {
+                canvas.style.border = '1px solid rgba(56, 189, 248, 0.2)';
+                canvas.style.boxShadow = '0 0 30px rgba(56, 189, 248, 0.2)';
+            }
+
+            // Iniciar serpientes en carriles seguros
+            snake1 = [
+                { x: 3, y: 10 },
+                { x: 3, y: 11 },
+                { x: 3, y: 12 }
+            ];
+            dx1 = 0; dy1 = -1;
+            nextDx1 = 0; nextDy1 = -1;
+
+            snake2 = [
+                { x: 16, y: 10 },
+                { x: 16, y: 11 },
+                { x: 16, y: 12 }
+            ];
+            dx2 = 0; dy2 = -1;
+            nextDx2 = 0; nextDy2 = -1;
+
+            score1 = 0;
+            score2 = 0;
+            winningScore = 0;
+            currentScoreEl.textContent = '0';
+            p2ScoreEl.textContent = '0';
+
+            isGameOver = false;
+            gameStarted = true;
+            normalFoodEatenCount = 0;
+
+            deactivateBonus();
+            deactivateActivePowerUp();
+
+            particles = [];
+
+            // Solo el Host decide la posición de la comida
+            if (onlinePlayerIndex === 1) {
+                spawnFood();
+            }
+
+            AudioFX.init();
+            
+            // Ocultar modal
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            gameOverModal.classList.add('hidden');
+            gameOverModal.classList.remove('flex');
+            playerNameInput.value = '';
+
+            updateDPadVisibility();
+
+            if (gameLoopTimeout) clearTimeout(gameLoopTimeout);
+            
+            // Solo el Host ejecuta el bucle físico local
+            if (onlinePlayerIndex === 1) {
+                gameLoop();
+            }
+        }
+
+        // Cliente envía input de dirección al Host
+        function sendOnlineInput(direction) {
+            if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                connection.send("SendInput", onlineRoomCode, JSON.stringify({ direction }))
+                    .catch(err => console.error("Error al enviar input:", err));
+            }
+        }
+
+        // Host recibe input del Cliente y lo aplica
+        function applyInputReceived(directionJson) {
+            if (onlinePlayerIndex !== 1) return; // Solo el Host procesa inputs
+
+            try {
+                const data = JSON.parse(directionJson);
+                const direction = data.direction;
+
+                if (direction === 'up' && dy2 === 0) { nextDx2 = 0; nextDy2 = -1; }
+                if (direction === 'down' && dy2 === 0) { nextDx2 = 0; nextDy2 = 1; }
+                if (direction === 'left' && dx2 === 0) { nextDx2 = -1; nextDy2 = 0; }
+                if (direction === 'right' && dx2 === 0) { nextDx2 = 1; nextDy2 = 0; }
+            } catch (err) {
+                console.error("Error al procesar input recibido:", err);
+            }
+        }
+
+        // Cliente recibe estado del Host y lo dibuja
+        function applyStateReceived(stateJson) {
+            if (onlinePlayerIndex !== 2) return; // Solo el Cliente recibe y aplica estados
+
+            try {
+                const state = JSON.parse(stateJson);
+
+                // Crear explosión local si la comida cambió de posición (significa que fue comida)
+                if (foodX !== state.foodX) {
+                    const J1Eats = (snake1[0].x === foodX && snake1[0].y === foodY);
+                    createExplosion(foodX, foodY, J1Eats ? skinJ1.headColor : skinJ2.headColor);
+                    AudioFX.playEat();
+                }
+
+                // Explosión de comida dorada
+                if (bonusActive && !state.bonusActive && state.bonusX === null) {
+                    if (state.score1 > score1 || state.score2 > score2) {
+                        createExplosion(bonusX, bonusY, '#fbbf24');
+                        AudioFX.playBonus();
+                    }
+                }
+
+                // Sincronizar variables
+                snake1 = state.snake1;
+                snake2 = state.snake2;
+                dx1 = state.dx1; dy1 = state.dy1;
+                dx2 = state.dx2; dy2 = state.dy2;
+                score1 = state.score1;
+                score2 = state.score2;
+                foodX = state.foodX;
+                foodY = state.foodY;
+                bonusX = state.bonusX;
+                bonusY = state.bonusY;
+                bonusActive = state.bonusActive;
+                bonusTimeLeft = state.bonusTimeLeft;
+                powerUpX = state.powerUpX;
+                powerUpY = state.powerUpY;
+                powerUpOnMapType = state.powerUpOnMapType;
+                powerUpActiveType = state.powerUpActiveType;
+                powerUpTimeLeft = state.powerUpTimeLeft;
+
+                // Actualizar puntuación en UI
+                currentScoreEl.textContent = score1;
+                p2ScoreEl.textContent = score2;
+
+                // Redibujar canvas
+                draw();
+
+                // Si el Host notificó fin de juego
+                if (state.isGameOver && !isGameOver) {
+                    triggerGameOver(state.gameOverReason);
+                }
+            } catch (err) {
+                console.error("Error al aplicar estado recibido:", err);
+            }
+        }
+
+        // Desconexión del rival
+        function triggerOpponentDisconnect() {
+            isGameOver = true;
+            gameStarted = false;
+            clearTimeout(gameLoopTimeout);
+            deactivateBonus();
+            deactivateActivePowerUp();
+            if (powerUpSpawnInterval) clearInterval(powerUpSpawnInterval);
+
+            gameOverTitle.textContent = "¡Victoria por abandono!";
+            gameOverText.innerHTML = "Tu rival se ha desconectado de la partida.";
+            winningScore = (onlinePlayerIndex === 1) ? score1 : score2;
+            finalScoreEl.textContent = winningScore;
+
+            updateDPadVisibility();
+
+            gameOverModal.classList.remove('hidden');
+            gameOverModal.classList.add('flex');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+                playerNameInput.focus();
+            }, 10);
+        }
 
         // Inicializar canvas vacío
         ctx.fillStyle = '#1e293b';

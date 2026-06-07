@@ -1,17 +1,22 @@
 using System.Collections.Concurrent;
+using SnakeQuest.API;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add CORS policy to allow any origin (*)
+// Add CORS policy supporting SignalR credentials from any origin
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
+
+// Add SignalR services
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -47,6 +52,9 @@ app.MapPost("/api/scores", (ScoreRecord request) =>
     scores.Add(request);
     return Results.Created($"/api/scores", request);
 });
+
+// Map the SignalR GameHub
+app.MapHub<GameHub>("/gamehub");
 
 app.Run();
 
